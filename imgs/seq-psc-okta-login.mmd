@@ -1,0 +1,9 @@
+sequenceDiagram
+  participant User
+  participant PSC as PSC (Keycloak)
+  participant Okta as Okta (Tenant ES)
+  User->>PSC: GET /auth?kc_idp_hint=OKTA_<tenantAlias>
+  PSC-->>Okta: Redirect to /authorize (OIDC)
+  Okta->>User: AuthN (pwd + Okta Verify) / CPx (PIN+carte)
+  Okta-->>PSC: ID Token (tid, oid, amr[...])
+  PSC-->>User: Session établie (SSO PSC)

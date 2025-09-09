@@ -1,0 +1,6 @@
+sequenceDiagram
+  participant Okta as Okta (AS)
+  participant Hook as Token Inline Hook
+  Okta->>Hook: PRE-TOKEN: context (factors, method)
+  Hook-->>Okta: PATCH amr: ["swk","mfa","pwd","okta_verify"] | ["sc","pin","mfa","hwk"]
+  Okta-->>Client: ID/Access Token (tid, oid, amr)

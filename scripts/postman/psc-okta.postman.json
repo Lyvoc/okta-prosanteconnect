@@ -1,0 +1,184 @@
+{
+  "info": {
+    "name": "PSC ↔ Okta – OIDC/OAuth2 (Sandbox)",
+    "_postman_id": "e9b0c9a8-psc-okta-collection",
+    "description": "Collection Postman pour tester une intégration Pro Santé Connect (PSC) avec Okta (mono-tenant).\n\n✅ Inclus :\n- GET /authorize (PKCE supporté)\n- POST /token\n- GET /userinfo\n- POST /introspect\n- POST /revoke\n- GET /.well-known/openid-configuration\n- GET /keys (JWKS)\n\n🔧 Variables attendues :\n- okta_domain: ex. https://yourorg.okta.com\n- auth_server_id: ex. default\n- client_id, client_secret\n- redirect_uri\n- scope: ex. openid profile email offline_access\n\n🔐 PKCE : code_verifier et code_challenge générés automatiquement.\n\nℹ️ Notes :\n- Pour PSC, l’application côté Okta doit utiliser OIDC (Authorization Code + PKCE).\n- KC_IDP_HINT (OKTA_<tenantAlias>) est géré côté PSC.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "okta_domain", "value": "https://yourorg.okta.com"},
+    {"key": "auth_server_id", "value": "default"},
+    {"key": "client_id", "value": "YOUR_CLIENT_ID"},
+    {"key": "client_secret", "value": "YOUR_CLIENT_SECRET"},
+    {"key": "redirect_uri", "value": "https://example.com/callback"},
+    {"key": "scope", "value": "openid profile email offline_access"},
+    {"key": "state", "value": ""},
+    {"key": "nonce", "value": ""},
+    {"key": "code_verifier", "value": ""},
+    {"key": "code_challenge", "value": ""},
+    {"key": "code_challenge_method", "value": "S256"}
+  ],
+  "item": [
+    {
+      "name": "OIDC – OpenID Configuration",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/.well-known/openid-configuration",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", ".well-known", "openid-configuration"]
+        }
+      }
+    },
+    {
+      "name": "OIDC – JWKS (Public Keys)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/keys",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "keys"]
+        }
+      }
+    },
+    {
+      "name": "Authorize (GET – Authorization Code + PKCE)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "function b64url(wordArray) {",
+              "  return CryptoJS.enc.Base64.stringify(wordArray)",
+              "    .replace(/\\+/g, '-')",
+              "    .replace(/\\//g, '_')",
+              "    .replace(/=+$/, '');",
+              "}",
+              "",
+              "if (!pm.collectionVariables.get('state')) {",
+              "  pm.collectionVariables.set('state', CryptoJS.lib.WordArray.random(16).toString());",
+              "}",
+              "if (!pm.collectionVariables.get('nonce')) {",
+              "  pm.collectionVariables.set('nonce', CryptoJS.lib.WordArray.random(16).toString());",
+              "}",
+              "",
+              "if (!pm.collectionVariables.get('code_verifier')) {",
+              "  var verifier = b64url(CryptoJS.lib.WordArray.random(32));",
+              "  pm.collectionVariables.set('code_verifier', verifier);",
+              "}",
+              "var method = pm.collectionVariables.get('code_challenge_method') || 'S256';",
+              "if (method === 'S256') {",
+              "  var sha256 = CryptoJS.SHA256(pm.collectionVariables.get('code_verifier'));",
+              "  pm.collectionVariables.set('code_challenge', b64url(sha256));",
+              "} else {",
+              "  pm.collectionVariables.set('code_challenge', pm.collectionVariables.get('code_verifier'));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/authorize?client_id={{client_id}}&redirect_uri={{redirect_uri}}&response_type=code&scope={{scope}}&state={{state}}&nonce={{nonce}}&code_challenge={{code_challenge}}&code_challenge_method={{code_challenge_method}}",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "authorize"],
+          "query": [
+            {"key": "client_id", "value": "{{client_id}}"},
+            {"key": "redirect_uri", "value": "{{redirect_uri}}"},
+            {"key": "response_type", "value": "code"},
+            {"key": "scope", "value": "{{scope}}"},
+            {"key": "state", "value": "{{state}}"},
+            {"key": "nonce", "value": "{{nonce}}"},
+            {"key": "code_challenge", "value": "{{code_challenge}}"},
+            {"key": "code_challenge_method", "value": "{{code_challenge_method}}"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Token (POST – exchange code)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/x-www-form-urlencoded"}
+        ],
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/token",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "token"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "grant_type", "value": "authorization_code"},
+            {"key": "client_id", "value": "{{client_id}}"},
+            {"key": "client_secret", "value": "{{client_secret}}"},
+            {"key": "redirect_uri", "value": "{{redirect_uri}}"},
+            {"key": "code", "value": "<paste_authorization_code_here>"},
+            {"key": "code_verifier", "value": "{{code_verifier}}"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "UserInfo (GET)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{access_token}}"}
+        ],
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/userinfo",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "userinfo"]
+        }
+      }
+    },
+    {
+      "name": "Introspection (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/x-www-form-urlencoded"},
+          {"key": "Authorization", "value": "Basic {{basic_auth_b64}}"}
+        ],
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/introspect",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "introspect"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "token", "value": "{{access_token}}"},
+            {"key": "token_type_hint", "value": "access_token"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Revoke (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/x-www-form-urlencoded"},
+          {"key": "Authorization", "value": "Basic {{basic_auth_b64}}"}
+        ],
+        "url": {
+          "raw": "{{okta_domain}}/oauth2/{{auth_server_id}}/v1/revoke",
+          "host": ["{{okta_domain}}"],
+          "path": ["oauth2", "{{auth_server_id}}", "v1", "revoke"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "token", "value": "{{refresh_token}}"},
+            {"key": "token_type_hint", "value": "refresh_token"}
+          ]
+        }
+      }
+    }
+  ]
+}
