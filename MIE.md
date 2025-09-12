@@ -43,7 +43,7 @@ Concrètement, elle permet de remplacer ou compléter l’authentification nativ
 Okta Device Access permet :
 
 * de contrôler l’ouverture de session des **postes Windows et macOS** via les politiques de sécurité Okta ;
-* d’appliquer de l’**authentification forte (MFA)** dès le login au poste de travail (ex. Okta Verify, FIDO2, carte à puce, biométrie) ;
+* d’appliquer de l’**authentification forte (MFA)** dès le login au poste de travail (ex. Okta Verify, FIDO2, biométrie) ;
 * d’offrir une **expérience sans couture** : une seule authentification au poste peut donner accès à toutes les applications fédérées dans Okta ;
 * d’assurer une **gouvernance centralisée** : règles, accès et logs sont gérés dans Okta plutôt que localement.
 
